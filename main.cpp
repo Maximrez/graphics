@@ -121,28 +121,38 @@ void test_composite_bezier() {
 
 // Отсечения отрезков прямых выпуклым полигоном
 void test_draw_clip() {
+    auto clipping = [](Magick::Image &img, const vector<Point<int>> &points) {
+        Polygon pol(points);
+        assert(pol.is_simple());
+        assert(pol.is_convex());
+        pol.draw_bounds(img, Black);
+
+        vector<Edge> lines;
+        lines.emplace_back(Point{100, 200}, Point{350, 400});
+        lines.emplace_back(Point{100, 350}, Point{400, 20});
+        lines.emplace_back(Point{200, 250}, Point{300, 300});
+        lines.emplace_back(Point{400, 200}, Point{450, 250});
+        lines.emplace_back(Point{310, 310}, Point{400, 340});
+
+        for (auto &line: lines) {
+            line.draw(img, Green);
+            Edge clip_line = cyrus_beck_clip_line(line, pol);
+            if (clip_line.a != clip_line.b)
+                clip_line.draw(img, Blue);
+        }
+    };
+
+    vector<Point<int>> points = {Point{100, 100}, Point{250, 350}, Point{400, 400}, Point{380, 320}, Point{250, 150}};
     Magick::Image img("500x500", "white");
-    Polygon pol({Point{100, 100}, Point{250, 350}, Point{400, 400}, Point{380, 320}, Point{250, 150}});
-    assert(pol.is_simple());
-    assert(pol.is_convex());
-    pol.draw_bounds(img, Black);
-
-    vector<Edge> lines;
-    lines.emplace_back(Point{100, 200}, Point{350, 400});
-    lines.emplace_back(Point{100, 350}, Point{400, 20});
-    lines.emplace_back(Point{200, 250}, Point{300, 300});
-    lines.emplace_back(Point{400, 200}, Point{450, 250});
-    lines.emplace_back(Point{310, 310}, Point{400, 340});
-
-    for (auto &line: lines) {
-        line.draw(img, Green);
-        Edge clip_line = cyrus_beck_clip_line(line, pol);
-        if (clip_line.a != clip_line.b)
-            clip_line.draw(img, Blue);
-    }
-
+    clipping(img, points);
     save_img(img, "clip_line.png");
+
+    std::reverse(points.begin(), points.end());
+    Magick::Image img2("500x500", "white");
+    clipping(img2, points);
+    save_img(img2, "clip_line_reverse.png");
 }
+
 
 int main() {
 //    test_polygon_type();

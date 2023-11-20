@@ -74,13 +74,13 @@ Intersection intersection_point(const Point<int> &a, const Point<int> &b, const 
             int to_1 = max(a.y, b.y);
             int from_2 = min(c.y, d.y);
             int to_2 = max(c.y, d.y);
-            return {double(from_2 - from_1) / (to_2 - to_1), 0, COLLINEAR};
+            return {double(from_2 - from_1) / (to_2 - to_1), COLLINEAR};
         } else {
             int from_1 = min(a.x, b.x);
             int to_1 = max(a.x, b.x);
             int from_2 = min(c.x, d.x);
             int to_2 = max(c.x, d.x);
-            return {double(from_2 - from_1) / (to_2 - to_1), 0, COLLINEAR};
+            return {double(from_2 - from_1) / (to_2 - to_1), COLLINEAR};
         }
     }
 
