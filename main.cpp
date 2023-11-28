@@ -5,11 +5,13 @@
 #include <cassert>
 #include <vector>
 #include "polygon.h"
+#include "cube.h"
 #include <Magick++.h>
 
 using namespace std;
 
 const int DEPTH = 65535;
+const Magick::Color Red(DEPTH, 0, 0);
 const Magick::Color Green(0.4 * DEPTH, 0.8 * DEPTH, 0.4 * DEPTH);
 const Magick::Color Blue(0, 0, DEPTH);
 const Magick::Color Black(0, 0, 0);
@@ -153,6 +155,99 @@ void test_draw_clip() {
     save_img(img2, "clip_line_reverse.png");
 }
 
+void test_projection() {
+    Magick::Image img("500x500", "white");
+
+    Cube cube({200, 200, 100}, 100, 100, 100);
+    cube.rotate(M_PI / 4, M_PI / 8, 0, cube.get_center());
+    cube.draw_bounds(img, Black);
+    cube.draw(img, Blue);
+    save_img(img, "projection.png");
+}
+
+void draw_animation() {
+    int a = 200, b = 200, h = 300;
+    Cube cube({200, 200, 0}, a, b, h);
+    cube.rotate(M_PI_4, 0, M_PI / 4, cube.get_center());
+
+    int N = 50;
+    vector<Magick::Image> frames1(N, Magick::Image("700x700", "white"));
+    vector<Magick::Image> frames2(N, Magick::Image("700x700", "white"));
+    auto center = cube.get_center();
+    for (int i = 0; i < N; i++) {
+        cube.rotate(0, 2 * M_PI / N, 0, center);
+        cube.draw_one_point_projection(1e-3, frames1[i], Blue);
+        cube.draw(frames2[i], Blue);
+    }
+
+    for (auto &frame: frames1) {
+        frame.flip();
+        frame.animationDelay(1);
+    }
+    for (auto &frame: frames2) {
+        frame.flip();
+        frame.animationDelay(1);
+    }
+
+    Magick::writeImages(frames1.begin(), frames1.end(), "../images/anim.gif");
+    Magick::writeImages(frames2.begin(), frames2.end(), "../images/anim2.gif");
+}
+
+void test_weiler_atherton1() {
+    Magick::Image img("500x500", "white");
+    Polygon pol1({{50,  50},
+                  {100, 200},
+                  {200, 300},
+                  {300, 100}});
+    Polygon pol2({{100, 400},
+                  {300, 300},
+                  {150, 100}});
+    pol1.draw_bounds(img, Blue);
+    pol2.draw_bounds(img, Green);
+
+    Polygon res = weiler_atherton(pol1, pol2);
+    res.draw_bounds(img, Red);
+
+    save_img(img, "weiler_atherton1.png");
+}
+
+void test_weiler_atherton2() {
+    Magick::Image img("500x500", "white");
+    Polygon pol1({{100, 200},
+                  {100, 450},
+                  {300, 450},
+                  {300, 200}});
+    Polygon pol2({{150, 150},
+                  {150, 400},
+                  {400, 400},
+                  {250, 300},
+                  {400, 150}});
+    pol1.draw_bounds(img, Blue);
+    pol2.draw_bounds(img, Green);
+
+    Polygon res = weiler_atherton(pol1, pol2);
+    res.draw_bounds(img, Red);
+
+    save_img(img, "weiler_atherton2.png");
+}
+
+// тест на случай если полигоны не пересекаются
+void test_weiler_atherton3() {
+    Magick::Image img("500x500", "white");
+    Polygon pol1({{50,  50},
+                  {100, 200},
+                  {200, 300}});
+    Polygon pol2({{300, 400},
+                  {350, 300},
+                  {250, 300}});
+    pol1.draw_bounds(img, Blue);
+    pol2.draw_bounds(img, Green);
+
+    Polygon res = weiler_atherton(pol1, pol2);
+    res.draw_bounds(img, Red);
+
+    save_img(img, "weiler_atherton3.png");
+}
 
 int main() {
 //    test_polygon_type();
@@ -160,7 +255,11 @@ int main() {
 //    test_stars();
 //    test_bezier();
 //    test_composite_bezier();
-    test_draw_clip();
-
+//    test_draw_clip();
+    test_projection();
+    draw_animation();
+    test_weiler_atherton1();
+    test_weiler_atherton2();
+    test_weiler_atherton3();
     return 0;
 }

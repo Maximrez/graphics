@@ -3,6 +3,7 @@
 #include "draw.h"
 #include "edge.h"
 #include <cmath>
+#include <map>
 
 class BBox {
 public:
@@ -181,6 +182,10 @@ public:
         bbox.y_max += shift.y;
     }
 
+    size_t size() const {
+        return edges.size();
+    }
+
     vector<Edge> get_edges() const {
         return edges;
     }
@@ -196,9 +201,9 @@ Edge cyrus_beck_clip_line(const Edge &line, const Polygon &pol) {
         if (info.place_type == PlaceType::PARALLEL)
             continue;
         if (l * edge.n > 0) {
-            t1 = max(t1, info.t);
+            t1 = max(t1, info.t1);
         } else {
-            t2 = min(t2, info.t);
+            t2 = min(t2, info.t1);
         }
     }
 
@@ -209,4 +214,97 @@ Edge cyrus_beck_clip_line(const Edge &line, const Polygon &pol) {
     Point<int> b = line.a + l.multiply(t2);
 
     return Edge{a, b};
+}
+
+// Отсечение произвольного простого полигона по произвольному простому полигону, используя алгоритм Вейлера-Айзертона.
+// При реализации можно сделать несколько упрощений:
+// в случае, когда в результате отсечения образуется несколько полигонов, результатом может служить любой из этих полигонов;
+// вершины исходных полигонов не должны лежать на ребрах друг друга.
+Polygon weiler_atherton(const Polygon &orig, const Polygon &cutter) {
+    vector<Edge> orig_edges = orig.get_edges();
+    vector<Edge> cutter_edges = cutter.get_edges();
+    vector<Point<int>> list1, list2;
+    list1.reserve(1.5 * orig_edges.size());
+    list2.reserve(1.5 * cutter_edges.size());
+
+    map<Point<int>, size_t> m1, m2;
+    map<pair<int, int>, Intersection> new_points; // храним точки пересечения для отрезков, чтобы избежать магии округления и два раза не считать
+
+    for (size_t i = 0; i < orig_edges.size(); i++) {
+        auto orig_edge = orig_edges[i];
+        list1.push_back(orig_edge.a);
+
+        vector<pair<double, Point<int>>> intersects;
+        for (size_t j = 0; j < cutter_edges.size(); j++) {
+            Intersection ans = intersection_point(orig_edge, cutter_edges[j]);
+            double t1 = ans.t1, t2 = ans.t2;
+            if (ans.place_type != PlaceType::CROSS || t1 <= 0 || t1 >= 1 || t2 <= 0 || t2 >= 1)
+                continue;
+            Point<int> point = orig_edge.a + (orig_edge.b - orig_edge.a).multiply(t1);
+            intersects.emplace_back(t1, point);
+            new_points[{i, j}] = ans;
+        }
+
+        if (intersects.empty())
+            continue;
+        sort(intersects.begin(), intersects.end());
+        for (auto &[t, point]: intersects) {
+            list1.push_back(point);
+            m2[point] = list1.size() - 1;
+        }
+    }
+
+    for (size_t j = 0; j < cutter_edges.size(); j++) {
+        list2.push_back(cutter_edges[j].a);
+        vector<pair<double, Point<int>>> intersects;
+        for (size_t i = 0; i < orig_edges.size(); i++) {
+            if (!new_points.contains({i, j}))
+                continue;
+            auto ans = new_points[{i, j}];
+            Point<int> point = orig_edges[i].a + (orig_edges[i].b - orig_edges[i].a).multiply(ans.t1);
+            intersects.emplace_back(ans.t2, point);
+        }
+
+        if (intersects.empty())
+            continue;
+        sort(intersects.begin(), intersects.end());
+        for (auto &[t, point]: intersects) {
+            list2.push_back(point);
+            m1[point] = list2.size() - 1;
+        }
+    }
+
+    size_t begin = list1.size() + 1; // нужно начать с точки которая находится внутри отсекателя
+    for (auto &edge: orig_edges)
+        if (cutter.is_inside_even_odd_rule(edge.a)) {
+            begin = distance(list1.begin(), find(list1.begin(), list1.end(), edge.a));
+            break;
+        }
+
+    // если все точки находятся снаружи
+    if (begin == list1.size() + 1)
+        return orig;
+
+    size_t idx1 = (begin + 1) % list1.size();
+    vector<Point<int>> points = {list1[begin]};
+    while (idx1 != begin) {
+        points.push_back(list1[idx1]);
+        if (!m1.contains(list1[idx1])) {
+            idx1 = (idx1 + 1) % list1.size();
+            continue;
+        }
+
+        size_t idx2 = (m1[list1[idx1]] + 1) % list2.size();
+        while (true) {
+            points.push_back(list2[idx2]);
+            if (!m2.contains(list2[idx2])) {
+                idx2 = (idx2 + 1) % list2.size();
+            } else {
+                idx1 = (m2[list2[idx2]] + 1) % list1.size();
+                break;
+            }
+        }
+    }
+
+    return Polygon(points);
 }

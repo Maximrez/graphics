@@ -60,7 +60,8 @@ pair<bool, PlaceType> simple_intersection(const Edge &first, const Edge &second)
 }
 
 struct Intersection {
-    double t;
+    double t1;
+    double t2;
     PlaceType place_type;
 };
 
@@ -68,25 +69,30 @@ Intersection intersection_point(const Point<int> &a, const Point<int> &b, const 
     int ab_cd = -vec_area(b - a, d - c);
     if (ab_cd == 0) {
         if (vec_area(d - c, c - a) != 0)
-            return {0, PARALLEL};
+            return {0, 0, PARALLEL};
         if (a.x == c.x) {
             int from_1 = min(a.y, b.y);
             int to_1 = max(a.y, b.y);
             int from_2 = min(c.y, d.y);
             int to_2 = max(c.y, d.y);
-            return {double(from_2 - from_1) / (to_2 - to_1), COLLINEAR};
+            return {double(from_2 - from_1) / (to_2 - to_1), 0, COLLINEAR};
         } else {
             int from_1 = min(a.x, b.x);
             int to_1 = max(a.x, b.x);
             int from_2 = min(c.x, d.x);
             int to_2 = max(c.x, d.x);
-            return {double(from_2 - from_1) / (to_2 - to_1), COLLINEAR};
+            return {double(from_2 - from_1) / (to_2 - to_1), 0, COLLINEAR};
         }
     }
 
-    double t = static_cast<double>(vec_area(d - c, c - a)) / ab_cd;
+    double t1 = static_cast<double>(vec_area(d - c, c - a)) / ab_cd;
+    double t2 = static_cast<double>(vec_area(b - a, c - a)) / ab_cd;
 
-    return {t, CROSS};
+    return {t1, t2, CROSS};
+}
+
+Intersection intersection_point(const Edge &first, const Edge &second) {
+    return intersection_point(first.a, first.b, second.a, second.b);
 }
 
 bool is_inside_segment(const Edge &edge, const Point<int> &v) {
