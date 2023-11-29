@@ -37,9 +37,15 @@ private:
     vector<Edge> edges;
     BBox bbox;
 public:
+    Polygon() = default;
+
     explicit Polygon(vector<Point<int>> points) {
         // проверяем, что полигон ориентирован по часовой стрелке
-        if (vec_area(points[1] - points[0], points[2] - points[0]) > 0)
+        int area = 0;
+        for (int i = 1; i < points.size(); i++) {
+            area += vec_area(points[i] - points[i - 1], points[(i + 1) % points.size()] - points[i - 1]);
+        }
+        if (area > 0)
             std::reverse(points.begin(), points.end());
 
         edges = vector<Edge>(points.size());
@@ -283,7 +289,7 @@ Polygon weiler_atherton(const Polygon &orig, const Polygon &cutter) {
 
     // если все точки находятся снаружи
     if (begin == list1.size() + 1)
-        return orig;
+        return Polygon();
 
     size_t idx1 = (begin + 1) % list1.size();
     vector<Point<int>> points = {list1[begin]};

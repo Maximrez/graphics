@@ -96,14 +96,36 @@ public:
             face.draw_bounds(img, color);
     }
 
-    // Построение одноточечной перспективной проекции повернутого параллелепипеда. Центр проекции находится в точке [0, 0, k].
+    // Построение одноточечной перспективной проекции повернутого параллелепипеда. Центр проекции находится в точке [0, 0, 1/r].
     void draw_one_point_projection(double r, Magick::Image &img, const Magick::Color &color) const {
-        Point<int> center_projection = transform_point(center, r);
+        Point<int> center_projection = one_point_transform(center, r);
         for (auto &face: faces) {
-            Point<int> face_center = transform_point(face.center, r);
+            Point<int> face_center = one_point_transform(face.center, r);
             array<Point<int>, 4> points;
             for (size_t i = 0; i < face.points.size(); i++)
-                points[i] = transform_point(face.points[i], r);
+                points[i] = one_point_transform(face.points[i], r);
+
+            Point<int> n = cross(points[1] - points[0], points[2] - points[1]);
+            if (n * (center_projection - face_center) < 0)
+                n = -n;
+            if (n.z < 0)
+                continue;
+
+            draw_line(points[0], points[1], img, color);
+            draw_line(points[1], points[2], img, color);
+            draw_line(points[2], points[3], img, color);
+            draw_line(points[3], points[0], img, color);
+        }
+    }
+
+    // Построение одноточечной перспективной проекции повернутого параллелепипеда. Центр проекции находится в точке [1/p, 1/q, 0].
+    void draw_two_point_projection(double p, double q, Magick::Image &img, const Magick::Color &color) const {
+        Point<int> center_projection = two_point_transform(center, p, q);
+        for (auto &face: faces) {
+            Point<int> face_center = two_point_transform(face.center, p, q);
+            array<Point<int>, 4> points;
+            for (size_t i = 0; i < face.points.size(); i++)
+                points[i] = two_point_transform(face.points[i], p, q);
 
             Point<int> n = cross(points[1] - points[0], points[2] - points[1]);
             if (n * (center_projection - face_center) < 0)
@@ -120,7 +142,11 @@ public:
 
 private:
 
-    Point<int> transform_point(const Point<int> &point, double r) const {
+    Point<int> one_point_transform(const Point<int> &point, double r) const {
         return point.multiply(1.0 / (1 + r * point.z));
+    }
+
+    Point<int> two_point_transform(const Point<int> &point, double p, double q) const {
+        return point.multiply(1.0 / (1 + p * point.x + q * point.y));
     }
 };

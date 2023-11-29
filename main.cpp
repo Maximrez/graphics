@@ -165,6 +165,16 @@ void test_projection() {
     save_img(img, "projection.png");
 }
 
+void test_two_point_projection() {
+    Magick::Image img("500x500", "white");
+
+    Cube cube({200, 200, 100}, 200, 400, 300);
+    cube.rotate(0, M_PI / 8, M_PI / 4, cube.get_center());
+    cube.draw_two_point_projection(0.001, 0.002, img, Black);
+
+    save_img(img, "two_point_projection.png");
+}
+
 void draw_animation() {
     int a = 200, b = 200, h = 300;
     Cube cube({200, 200, 0}, a, b, h);
@@ -195,38 +205,52 @@ void draw_animation() {
 
 void test_weiler_atherton1() {
     Magick::Image img("500x500", "white");
-    Polygon pol1({{50,  50},
-                  {100, 200},
-                  {200, 300},
-                  {300, 100}});
-    Polygon pol2({{100, 400},
-                  {300, 300},
-                  {150, 100}});
+    vector<Point<int>> points1 = {{50,  50},
+                                  {100, 200},
+                                  {200, 300},
+                                  {300, 100}};
+    vector<Point<int>> points2 = {{100, 400},
+                                  {300, 300},
+                                  {150, 100}};
+    Polygon pol1(points1);
+    Polygon pol2(points2);
     pol1.draw_bounds(img, Blue);
     pol2.draw_bounds(img, Green);
 
     Polygon res = weiler_atherton(pol1, pol2);
     res.draw_bounds(img, Red);
+
+    std::reverse(points1.begin(), points1.end());
+    std::reverse(points2.begin(), points2.end());
+    Polygon res2 = weiler_atherton(Polygon(points1), Polygon(points2));
+    res2.draw_bounds(img, Black);
 
     save_img(img, "weiler_atherton1.png");
 }
 
 void test_weiler_atherton2() {
     Magick::Image img("500x500", "white");
-    Polygon pol1({{100, 200},
-                  {100, 450},
-                  {300, 450},
-                  {300, 200}});
-    Polygon pol2({{150, 150},
-                  {150, 400},
-                  {400, 400},
-                  {250, 300},
-                  {400, 150}});
+    vector<Point<int>> points1 = {{100, 200},
+                                  {100, 450},
+                                  {300, 450},
+                                  {300, 200}};
+    vector<Point<int>> points2 = {{150, 150},
+                                  {150, 400},
+                                  {400, 400},
+                                  {250, 300},
+                                  {400, 150}};
+    Polygon pol1(points1);
+    Polygon pol2(points2);
     pol1.draw_bounds(img, Blue);
     pol2.draw_bounds(img, Green);
 
     Polygon res = weiler_atherton(pol1, pol2);
     res.draw_bounds(img, Red);
+
+    std::reverse(points1.begin(), points1.end());
+    std::reverse(points2.begin(), points2.end());
+    Polygon res2 = weiler_atherton(Polygon(points1), Polygon(points2));
+    res2.draw_bounds(img, Black);
 
     save_img(img, "weiler_atherton2.png");
 }
@@ -234,17 +258,24 @@ void test_weiler_atherton2() {
 // тест на случай если полигоны не пересекаются
 void test_weiler_atherton3() {
     Magick::Image img("500x500", "white");
-    Polygon pol1({{50,  50},
-                  {100, 200},
-                  {200, 300}});
-    Polygon pol2({{300, 400},
-                  {350, 300},
-                  {250, 300}});
+    vector<Point<int>> points1 = {{50,  50},
+                                  {100, 200},
+                                  {200, 300}};
+    vector<Point<int>> points2 = {{300, 400},
+                                  {350, 300},
+                                  {250, 300}};
+    Polygon pol1(points1);
+    Polygon pol2(points2);
     pol1.draw_bounds(img, Blue);
     pol2.draw_bounds(img, Green);
 
     Polygon res = weiler_atherton(pol1, pol2);
     res.draw_bounds(img, Red);
+
+    std::reverse(points1.begin(), points1.end());
+    std::reverse(points2.begin(), points2.end());
+    Polygon res2 = weiler_atherton(Polygon(points1), Polygon(points2));
+    res2.draw_bounds(img, Black);
 
     save_img(img, "weiler_atherton3.png");
 }
@@ -257,7 +288,8 @@ int main() {
 //    test_composite_bezier();
 //    test_draw_clip();
     test_projection();
-    draw_animation();
+    test_two_point_projection();
+//    draw_animation();
     test_weiler_atherton1();
     test_weiler_atherton2();
     test_weiler_atherton3();
